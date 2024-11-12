@@ -10,7 +10,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 app = Flask(__name__)
 CORS(app)  
 app.config['SECRET_KEY'] = 'INVESTZ123'  # Replace with your actual secret key
-
+port = 7000
 # MongoDB connection URI
 mongo_uri = "mongodb+srv://TEST:12345@mubustest.yfyj3.mongodb.net/investz?retryWrites=true&w=majority"
 client = MongoClient(mongo_uri)
@@ -97,5 +97,5 @@ def token_required(f):
         return f(*args, **kwargs)
     return wrapper
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=port, debug=True)
