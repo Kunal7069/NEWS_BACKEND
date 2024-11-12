@@ -86,6 +86,35 @@ def login():
     }
     return jsonify(user_data), 200
 
+
+@app.route('/update-profile-photo', methods=['POST'])
+def update_profile_photo():
+    data = request.form
+    email = data.get("email")  # Get the email from the form data
+    profile_photo = request.files.get("profile_photo")  # Get the profile photo from the request
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    if not profile_photo:
+        return jsonify({"error": "Profile photo is required"}), 400
+
+    # Convert the photo to binary data
+    photo_data = profile_photo.read()
+    print("photo_data",photo_data)
+    # Find the user by email
+    user = user_collection.find_one({"email": email})
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Update the user's profile photo
+    user_collection.update_one(
+        {"email": email},
+        {"$set": {"profile_photo": photo_data}}
+    )
+
+    return jsonify({"message": "Profile photo updated successfully"}), 200
+
 # Decorator to verify the JWT token
 def token_required(f):
     def wrapper(*args, **kwargs):
