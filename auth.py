@@ -20,17 +20,20 @@ user_collection = db["USER"]
 # Route to enter data into the USER collection
 @app.route('/signup', methods=['POST'])
 def add_user():
-    first_name = request.form.get("first_name")
-    last_name = request.form.get("last_name")
-    contact = request.form.get("contact")
-    email = request.form.get("email")
-    password = request.form.get("password")
+    data = request.get_json()
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    contact = data.get("contact")
+    email = data.get("email")
+    password = data.get("password")
     print(first_name,last_name,contact,email,password)
     # Handling profile photo
     profile_photo = request.files.get("profile_photo")
     photo_data = profile_photo.read() if profile_photo else None
     
     # Hash the password before storing it
+    if not password:
+        return jsonify({"error": "Password is required"}), 400
     hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
     user_data = {
@@ -48,8 +51,9 @@ def add_user():
 # Route for user login and JWT generation
 @app.route('/login', methods=['POST'])
 def login():
-    email = request.json.get('email')
-    password = request.json.get('password')
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
     
     # Find user by email
     user = user_collection.find_one({"email": email})
