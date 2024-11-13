@@ -17,6 +17,10 @@ client = MongoClient(mongo_uri)
 db = client["investz"]
 user_collection = db["USER"]
 
+
+@app.route('/')
+def home():
+    return jsonify({'status': 'AUTH API IS RUNNING'})
 # Route to enter data into the USER collection
 @app.route('/signup', methods=['POST'])
 def add_user():
