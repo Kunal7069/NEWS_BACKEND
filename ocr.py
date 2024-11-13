@@ -19,7 +19,7 @@ def scrap_portfolio():
         if 'image' not in request.files:
             return jsonify({'error': 'No image file provided'}), 400
         
-        image_file = request.files['image']
+        image_file = request.files.get("image")
 
         # Create a temporary file using tempfile
         with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
