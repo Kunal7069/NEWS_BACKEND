@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
+import re
 import os
 import jwt
 import base64
@@ -21,6 +22,8 @@ user_collection = db["USER"]
 @app.route('/')
 def home():
     return jsonify({'status': 'AUTH API IS RUNNING'})
+
+
 # Route to enter data into the USER collection
 @app.route('/signup', methods=['POST'])
 def add_user():
@@ -30,14 +33,43 @@ def add_user():
     contact = data.get("contact")
     email = data.get("email")
     password = data.get("password")
-    print(first_name,last_name,contact,email,password)
-    # Handling profile photo
     profile_photo = request.files.get("profile_photo")
     photo_data = profile_photo.read() if profile_photo else None
     
-    # Hash the password before storing it
     if not password:
-        return jsonify({"error": "Password is required"}), 400
+        return jsonify({"message": "Password is required"}), 201
+    
+    if not first_name:
+        return jsonify({"message": "First Name is required"}), 201
+    
+    if not last_name:
+        return jsonify({"message": "Last Name is required"}), 201
+    
+    if not contact:
+        return jsonify({"message": "Contact is required"}), 201
+    
+    if not email:
+        return jsonify({"message": "Email is required"}), 201
+    
+    if len(contact)!=10:
+        return jsonify({"message": "Contact Format is wrong"}), 201
+    
+    if len(password)<6:
+        return jsonify({"message": "Password length should be atleast 6"}), 201
+    
+    email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if not re.match(email_regex, email):
+        return jsonify({"message": "Email format is not correct"}), 201    
+    
+    email_id = user_collection.find_one({"email": email})
+    if email_id:
+        return jsonify({"message": "Email id already registered"}), 201
+    
+    contact_number = user_collection.find_one({"contact": contact})
+    if contact_number:
+        return jsonify({"message": "Contact number already registered"}), 201
+    
+    
     hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
     user_data = {
@@ -59,14 +91,24 @@ def login():
     email = data.get('email')
     password = data.get('password')
     
+    if not email:
+        return jsonify({"message": "Email is required"}), 201
+    
+    if not password:
+        return jsonify({"message": "Password is required"}), 201
+    
+    email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if not re.match(email_regex, email):
+        return jsonify({"message": "Email format is not correct"}), 201 
+    
     # Find user by email
     user = user_collection.find_one({"email": email})
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"message": "Email is not registered"}), 201
     
     # Check if password matches
     if not check_password_hash(user['password'], password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        return jsonify({"message": "Invalid Password"}), 201
     
     # Generate JWT token
     token = jwt.encode({
