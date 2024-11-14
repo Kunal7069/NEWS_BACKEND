@@ -7,6 +7,7 @@ import jwt
 import base64
 import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
+from bson.json_util import dumps
 
 app = Flask(__name__)
 CORS(app)  
@@ -21,7 +22,9 @@ user_collection = db["USER"]
 
 @app.route('/')
 def home():
-    return jsonify({'status': 'AUTH API IS RUNNING'})
+    users = user_collection.find()  # Retrieve all documents
+    users_list = list(users)  # Convert cursor to list
+    return dumps(users_list), 200
 
 
 # Route to enter data into the USER collection
