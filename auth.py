@@ -34,7 +34,7 @@ def add_user():
     first_name = data.get("first_name")
     last_name = data.get("last_name")
     contact = data.get("contact")
-    email = data.get("email")
+    email = data.get("email").lower()
     password = data.get("password")
     risk_level = data.get("risk_level")
     profile_photo = request.files.get("profile_photo")
@@ -93,7 +93,7 @@ def add_user():
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    email = data.get('email')
+    email = data.get('email').lower()
     password = data.get('password')
     
     if not email:
