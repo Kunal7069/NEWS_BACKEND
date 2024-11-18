@@ -36,6 +36,7 @@ def add_user():
     contact = data.get("contact")
     email = data.get("email")
     password = data.get("password")
+    risk_level = data.get("risk_level")
     profile_photo = request.files.get("profile_photo")
     photo_data = profile_photo.read() if profile_photo else None
     
@@ -81,7 +82,8 @@ def add_user():
         "contact": contact,
         "email": email,
         "password": hashed_password,
-        "profile_photo": photo_data
+        "profile_photo": photo_data,
+        "risk_level": risk_level
     }
 
     user_collection.insert_one(user_data)
@@ -130,6 +132,7 @@ def login():
         "last_name": user['last_name'],
         "contact": user['contact'],
         "email": user['email'],
+        "risk_level":user['risk_level'],
         "profile_photo": profile_photo_base64,
         "token": token
     }
@@ -139,30 +142,41 @@ def login():
 @app.route('/update-profile-photo', methods=['POST'])
 def update_profile_photo():
     data = request.form
-    email = data.get("email")  # Get the email from the form data
+    email = data.get("email")
+    risk_level = data.get("risk_level")
     profile_photo = request.files.get("profile_photo")  # Get the profile photo from the request
 
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
-    if not profile_photo:
-        return jsonify({"error": "Profile photo is required"}), 400
-
-    # Convert the photo to binary data
-    photo_data = profile_photo.read()
-    print("photo_data",photo_data)
     # Find the user by email
     user = user_collection.find_one({"email": email})
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # Update the user's profile photo
+    update_data = {}
+
+    # Check if profile_photo is provided
+    if profile_photo:
+        photo_data = profile_photo.read()
+        print("photo_data:", photo_data)
+        update_data["profile_photo"] = photo_data
+
+    # Check if risk_level is provided
+    if risk_level is not None:  # Only update risk_level if provided
+        update_data["risk_level"] = risk_level
+
+    if not update_data:  # No data to update
+        return jsonify({"error": "No data to update"}), 400
+
+    # Update the user's profile photo and/or risk_level
     user_collection.update_one(
         {"email": email},
-        {"$set": {"profile_photo": photo_data}}
+        {"$set": update_data}
     )
 
-    return jsonify({"message": "Profile photo updated successfully"}), 200
+    return jsonify({"message": "Profile updated successfully"}), 200
+
 
 # Decorator to verify the JWT token
 def token_required(f):
