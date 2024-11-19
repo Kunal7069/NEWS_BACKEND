@@ -8,6 +8,7 @@ import base64
 import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
 from bson.json_util import dumps
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  
@@ -18,7 +19,7 @@ mongo_uri = "mongodb+srv://TEST:12345@mubustest.yfyj3.mongodb.net/investz?retryW
 client = MongoClient(mongo_uri)
 db = client["investz"]
 user_collection = db["USER"]
-
+portfolio_collection = db["PORTFOLIO"]
 
 @app.route('/')
 def home():
@@ -138,6 +139,47 @@ def login():
     }
     return jsonify(user_data), 200
 
+@app.route('/save_portfolio', methods=['POST'])
+def save_portfolio():
+    data = request.get_json()
+    email = data.get('email')
+    stock = data.get('stock')
+    purchase = data.get('purchase')
+    current = data.get('current')
+    quantity = data.get('quantity')
+    pl = data.get('pl')
+    
+    if not all([email, stock, purchase, current, quantity, pl]):
+        return jsonify({"error": "All fields (email, stock, purchase, current, quantity, pl) are required"}), 400
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    stock_details = {
+        "stock": stock,
+        "purchase": purchase,
+        "current": current,
+        "quantity": quantity,
+        "pl": pl,
+        "timestamp": timestamp
+    }
+    
+    existing_portfolio = portfolio_collection.find_one({"email": email})
+
+    if existing_portfolio:
+        # Append to existing portfolio
+        portfolio_collection.update_one(
+            {"email": email},
+            {"$push": {"portfolio": stock_details}}
+        )
+        message = "Portfolio updated successfully"
+    else:
+        # Create new entry
+        new_entry = {
+            "email": email,
+            "portfolio": [stock_details]
+        }
+        portfolio_collection.insert_one(new_entry)
+        message = "New portfolio created successfully"
+
+    return jsonify(stock_details), 200
 
 @app.route('/update-profile-photo', methods=['POST'])
 def update_profile_photo():
