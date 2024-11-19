@@ -8,11 +8,10 @@ import base64
 import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
 from bson.json_util import dumps
-from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  
-app.config['SECRET_KEY'] = 'INVESTZ123'  # Replace with your actual secret key
+app.config['SECRET_KEY'] = 'INVESTZ123'  
 port = 7000
 # MongoDB connection URI
 mongo_uri = "mongodb+srv://TEST:12345@mubustest.yfyj3.mongodb.net/investz?retryWrites=true&w=majority"
@@ -151,7 +150,7 @@ def save_portfolio():
     
     if not all([email, stock, purchase, current, quantity, pl]):
         return jsonify({"error": "All fields (email, stock, purchase, current, quantity, pl) are required"}), 400
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
     stock_details = {
         "stock": stock,
         "purchase": purchase,
