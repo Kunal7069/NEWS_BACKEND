@@ -74,7 +74,7 @@ def get_credential_from_dropbox(dropbox_url):
             
             # Now directly pass the json_data (dictionary) to the InstalledAppFlow
             flow = InstalledAppFlow.from_client_config(json_data, SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
             
             return creds  # Returning the credentials object
             
