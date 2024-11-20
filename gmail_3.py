@@ -137,5 +137,5 @@ def gmail_api():
     except HttpError as error:
         return jsonify({"error": f"An error occurred: {error}"}), 500
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=port, debug=True)
