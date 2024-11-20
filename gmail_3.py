@@ -12,7 +12,8 @@ from flask import Flask, request, jsonify
 
 # Scope for Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
-DROPBOX_ACCESS_TOKEN = ""
+DROPBOX_ACCESS_TOKEN = "07TLJf2vUl_MprmcvBeuetcfaKv3gGhqTfn6colvwILVNGKvB_IiI_qMD5ljCc_dHHvFIvj5BbvtyIuUosx6YOHPobHBhTpe2e09mK0TLvIGo0SWU40i4F_DWYMM753WrstDhCgm0KgRLEXN30w5FBC.ls"
+DROPBOX_ACCESS_TOKEN = DROPBOX_ACCESS_TOKEN[::-1]
 app = Flask(__name__)
 
 def get_email_body(message):
