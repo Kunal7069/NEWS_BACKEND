@@ -8,17 +8,92 @@ import base64
 import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
 from bson.json_util import dumps
+import requests
+from textblob import TextBlob
 
 app = Flask(__name__)
 CORS(app)  
 app.config['SECRET_KEY'] = 'INVESTZ123'  
 port = 443
+
+
+api_url = 'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=IBM&apikey=ZVCGG3ZMTYIIP87Z'
 # MongoDB connection URI
 mongo_uri = "mongodb+srv://TEST:12345@mubustest.yfyj3.mongodb.net/investz?retryWrites=true&w=majority"
 client = MongoClient(mongo_uri)
 db = client["investz"]
 user_collection = db["USER"]
 portfolio_collection = db["PORTFOLIO"]
+
+
+def analyze_sentiment(text):
+    """
+    Analyze the sentiment of a given text using TextBlob.
+    Returns polarity (-1 to 1) and subjectivity (0 to 1) scores,
+    along with a sentiment label.
+    
+    Parameters:
+    text (str): The text to analyze
+    
+    Returns:
+    dict: Dictionary containing sentiment analysis results
+    """
+    # Clean the text
+    def clean_text(text):
+        # Remove special characters and digits
+        text = re.sub(r'[^a-zA-Z\s]', '', text)
+        # Convert to lowercase
+        text = text.lower()
+        # Remove extra whitespace
+        text = ' '.join(text.split())
+        return text
+    
+    # Clean the input text
+    cleaned_text = clean_text(text)
+    
+    # Create TextBlob object
+    blob = TextBlob(cleaned_text)
+    
+    # Get sentiment scores
+    polarity = blob.sentiment.polarity
+    subjectivity = blob.sentiment.subjectivity
+    
+    # Define keywords that could indicate a neutral sentiment
+    neutral_keywords = ["mixed", "uncertainty", "subdued", "no clear direction", "balancing"]
+    
+    # Check for presence of neutral keywords
+    if any(word in cleaned_text for word in neutral_keywords):
+        sentiment = 'Neutral'
+    else:
+        # Determine sentiment label based on polarity
+        if polarity > 0:
+            sentiment = 'Positive'
+        elif polarity < 0:
+            sentiment = 'Negative'
+        else:
+            sentiment = 'Neutral'
+    
+    # Calculate intensity
+    intensity = abs(polarity)
+    if intensity < 0.3:
+        strength = 'Weak'
+    elif intensity < 0.6:
+        strength = 'Moderate'
+    else:
+        strength = 'Strong'
+    
+    return {
+        'polarity': polarity,
+        'subjectivity': subjectivity,
+        'sentiment': sentiment,
+        'strength': strength,
+        'cleaned_text': cleaned_text
+    }
+
+
+
+
+
 
 @app.route('/')
 def home():
@@ -179,6 +254,24 @@ def save_portfolio():
         message = "New portfolio created successfully"
 
     return jsonify(stock_details), 200
+
+@app.route('/latest-news')
+def latest_news():
+    try:
+        # Make the API call using requests
+        response = requests.get(api_url)
+        data = response.json()
+        result=[]
+        for i in data['feed']:
+            results = analyze_sentiment(i['summary'])
+            result.append({"title": i['title'],"summary":i['summary'] , "url":i['url'] , "sentiment":results['sentiment'] ,
+                           "strength": results['strength'] , "polarity_score": results['polarity'] , "subjectivity_score":results['subjectivity']} )
+        return jsonify(result)
+        
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/update-profile-photo', methods=['POST'])
 def update_profile_photo():
