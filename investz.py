@@ -312,6 +312,40 @@ def update_profile_photo():
     return jsonify({"message": "Profile updated successfully"}), 200
 
 
+@app.route('/get-stock-data', methods=['POST'])
+def get_stock_data():
+    data = request.get_json()
+    symbol = data.get('symbol') 
+    
+    if not symbol:
+        return jsonify({"error": "No symbol provided"}), 400
+    
+    symbol_name = symbol.split('.')[0]
+
+    url = "https://www.alphavantage.co/query"
+    params = {
+        'function': 'TIME_SERIES_DAILY',
+        'symbol': f"{symbol_name}.BSE", 
+        'outputsize': 'full',
+        'apikey': "GKW8AS974VHJOE06"
+    }
+
+    response = requests.get(url, params=params)
+    result = response.json()
+    
+    if response.status_code == 200:
+        time_series = result.get('Time Series (Daily)', {})
+     
+        sorted_dates = sorted(time_series.keys(), key=lambda x: datetime.strptime(x, '%Y-%m-%d'), reverse=True)
+        print("sorted_dates",sorted_dates)
+        latest_date = sorted_dates[0]
+        latest_data = time_series[latest_date]
+
+        return jsonify(latest_data['4. close'])
+    
+    else:
+        return jsonify({"error": "Failed to fetch data from Alpha Vantage"}), 500
+
 # Decorator to verify the JWT token
 def token_required(f):
     def wrapper(*args, **kwargs):
