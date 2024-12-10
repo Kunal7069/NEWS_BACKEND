@@ -346,6 +346,32 @@ def get_stock_data():
     else:
         return jsonify({"error": "Failed to fetch data from Alpha Vantage"}), 500
 
+@app.route('/get-stock', methods=['GET'])
+def get_stock():
+    url = "https://www.alphavantage.co/query"
+    params = {
+        'function': 'TIME_SERIES_DAILY',
+        'symbol': "TCS.BSE", 
+        'outputsize': 'full',
+        'apikey': "GKW8AS974VHJOE06"
+    }
+
+    response = requests.get(url, params=params)
+    result = response.json()
+    
+    if response.status_code == 200:
+        time_series = result.get('Time Series (Daily)', {})
+     
+        sorted_dates = sorted(time_series.keys(), key=lambda x: datetime.strptime(x, '%Y-%m-%d'), reverse=True)
+        print("sorted_dates",sorted_dates)
+        latest_date = sorted_dates[0]
+        latest_data = time_series[latest_date]
+
+        return jsonify(latest_data['4. close'])
+    
+    else:
+        return jsonify({"error": "Failed to fetch data from Alpha Vantage"}), 500
+
 # Decorator to verify the JWT token
 def token_required(f):
     def wrapper(*args, **kwargs):
