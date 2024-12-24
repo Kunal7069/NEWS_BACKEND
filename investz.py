@@ -101,39 +101,62 @@ def home():
     users_list = list(users)  # Convert cursor to list
     return dumps(users_list), 200
 
-@app.route('/get_last_stock_value', methods=['POST'])
-def get_last_stock_value():
+@app.route('/get_stock_value', methods=['POST'])
+def get_stock():
+    # Get the stock name and date from the request JSON
+    data = request.get_json()
+    stock_name = data.get("name", "")
+    date = data.get("date", "")
+
+    if not stock_name:
+        return jsonify({"error": "Stock name is required"}), 400
+    if not date:
+        return jsonify({"error": "Date is required"}), 400
+
+    # API URL and headers for fetching ISIN
+    url = "https://indian-stock-exchange-api2.p.rapidapi.com/stock"
+    querystring = {"name": stock_name}
+    headers = {
+        "x-rapidapi-key": "fa0a3c8283mshf9b4f1bc6f274afp192e8ejsn78c06ad7918e",
+        "x-rapidapi-host": "indian-stock-exchange-api2.p.rapidapi.com"
+    }
+
     try:
-        # Get the stock name from the request body
-        data = request.json
-        stock_name = data.get("stock_name")
-
-        if not stock_name:
-            return jsonify({"error": "Stock name is required"}), 400
-
-        # API details
-        url = "https://indian-stock-exchange-api2.p.rapidapi.com/historical_data"
-        querystring = {"stock_name": stock_name, "period": "1m", "filter": "price"}
-        headers = {
-            "x-rapidapi-key": "fa0a3c8283mshf9b4f1bc6f274afp192e8ejsn78c06ad7918e",
-            "x-rapidapi-host": "indian-stock-exchange-api2.p.rapidapi.com"
-        }
-
-        # Make the request to the external API
+        # Make the API request to get ISIN
         response = requests.get(url, headers=headers, params=querystring)
-        response.raise_for_status()  # Raise an error for HTTP codes 4xx/5xx
-
-        # Extract the desired data
+        response.raise_for_status()
         result = response.json()
-        last_value = result['datasets'][0]['values'][-1]
+        isin = result['companyProfile']['isInId']
 
-        # Return the last value
-        return jsonify({"stock_name": stock_name, "last_value": last_value})
-    
+        # API URL for fetching historical candle data
+        candle_url = f"https://api.upstox.com/v2/historical-candle/NSE_EQ%7C{isin}/day/{date}/{date}"
+
+        # Make the API request to fetch candle data
+        candle_response = requests.get(candle_url)
+        candle_response.raise_for_status()
+        candle_data = candle_response.json()
+
+        # Extract the first candle and map the values
+        candles = candle_data.get("data", {}).get("candles", [])
+        if candles:
+            first_candle = candles[0]
+            structured_candle = {
+                "timestamp": first_candle[0],
+                "open": first_candle[1],
+                "high": first_candle[2],
+                "low": first_candle[3],
+                "close": first_candle[4],
+            }
+        else:
+            structured_candle = None
+
+        return jsonify({"isin": isin, "candle_data": structured_candle})
+
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": "Failed to fetch data from the external API", "details": str(e)}), 500
-    except Exception as e:
-        return jsonify({"error": "An unexpected error occurred", "details": str(e)}), 500
+        return jsonify({"error": "Failed to fetch data", "details": str(e)}), 500
+
+
+
 # Route to enter data into the USER collection
 @app.route('/signup', methods=['POST'])
 def add_user():
