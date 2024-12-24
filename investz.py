@@ -101,7 +101,39 @@ def home():
     users_list = list(users)  # Convert cursor to list
     return dumps(users_list), 200
 
+@app.route('/get_last_stock_value', methods=['POST'])
+def get_last_stock_value():
+    try:
+        # Get the stock name from the request body
+        data = request.json
+        stock_name = data.get("stock_name")
 
+        if not stock_name:
+            return jsonify({"error": "Stock name is required"}), 400
+
+        # API details
+        url = "https://indian-stock-exchange-api2.p.rapidapi.com/historical_data"
+        querystring = {"stock_name": stock_name, "period": "1m", "filter": "price"}
+        headers = {
+            "x-rapidapi-key": "fa0a3c8283mshf9b4f1bc6f274afp192e8ejsn78c06ad7918e",
+            "x-rapidapi-host": "indian-stock-exchange-api2.p.rapidapi.com"
+        }
+
+        # Make the request to the external API
+        response = requests.get(url, headers=headers, params=querystring)
+        response.raise_for_status()  # Raise an error for HTTP codes 4xx/5xx
+
+        # Extract the desired data
+        result = response.json()
+        last_value = result['datasets'][0]['values'][-1]
+
+        # Return the last value
+        return jsonify({"stock_name": stock_name, "last_value": last_value})
+    
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": "Failed to fetch data from the external API", "details": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": "An unexpected error occurred", "details": str(e)}), 500
 # Route to enter data into the USER collection
 @app.route('/signup', methods=['POST'])
 def add_user():
