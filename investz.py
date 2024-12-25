@@ -150,7 +150,7 @@ def get_stock():
         else:
             structured_candle = None
 
-        return jsonify({"isin": isin, "candle_data": structured_candle})
+        return jsonify(structured_candle['close'])
 
     except requests.exceptions.RequestException as e:
         return jsonify({"error": "Failed to fetch data", "details": str(e)}), 500
