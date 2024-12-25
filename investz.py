@@ -10,14 +10,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from bson.json_util import dumps
 import requests
 from textblob import TextBlob
+from bson import ObjectId
 
 app = Flask(__name__)
 CORS(app)  
 app.config['SECRET_KEY'] = 'INVESTZ123'  
-port = 443
+port=443
 
-
-api_url = 'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=IBM&apikey=ZVCGG3ZMTYIIP87Z'
+api_url = 'https://api.marketaux.com/v1/news/all?api_token=ir0kwZwXQT6rczYhlm86UJeJHUhMgNDYnbWi32Kr&countries=in'
 # MongoDB connection URI
 mongo_uri = "mongodb+srv://TEST:12345@mubustest.yfyj3.mongodb.net/investz?retryWrites=true&w=majority"
 client = MongoClient(mongo_uri)
@@ -26,18 +26,9 @@ user_collection = db["USER"]
 portfolio_collection = db["PORTFOLIO"]
 
 
+
 def analyze_sentiment(text):
-    """
-    Analyze the sentiment of a given text using TextBlob.
-    Returns polarity (-1 to 1) and subjectivity (0 to 1) scores,
-    along with a sentiment label.
     
-    Parameters:
-    text (str): The text to analyze
-    
-    Returns:
-    dict: Dictionary containing sentiment analysis results
-    """
     # Clean the text
     def clean_text(text):
         # Remove special characters and digits
@@ -157,6 +148,8 @@ def get_stock():
 
 
 
+
+
 # Route to enter data into the USER collection
 @app.route('/signup', methods=['POST'])
 def add_user():
@@ -268,6 +261,30 @@ def login():
     }
     return jsonify(user_data), 200
 
+@app.route('/delete_portfolio', methods=['POST'])
+def delete_portfolio():
+    data = request.get_json()
+    email = data.get('email')
+    stock_details = data.get('stock_details')  
+    if not email or not stock_details:
+        return jsonify({"error": "Email and form are required"}), 400
+
+    result = portfolio_collection.update_one(
+        {"email": email},                 
+        {"$pull": {"portfolio": stock_details}}    
+    )
+
+    if result.matched_count == 0:
+        return jsonify({"error": "No document found for the given email"}), 404
+
+    if result.modified_count == 0:
+        return jsonify({"message": "No matching portfolio entry found"}), 200
+
+    return jsonify({"message": "Portfolio entry deleted successfully"}), 200
+    
+    
+
+
 @app.route('/save_portfolio', methods=['POST'])
 def save_portfolio():
     data = request.get_json()
@@ -310,21 +327,111 @@ def save_portfolio():
 
     return jsonify(stock_details), 200
 
+@app.route('/get_portfolio', methods=['POST'])
+def get_portfolio():
+    try:
+        # Get the email from the POST request body
+        data = request.get_json()
+        email = data.get("email")
+
+        if not email:
+            return jsonify({
+                "status": "error",
+                "message": "Email is required"
+            }), 400
+
+        # Find the portfolio for the given email
+        portfolio = portfolio_collection.find_one({"email": email})
+
+        if not portfolio:
+            check=[]
+            return jsonify(check), 200
+
+        # Convert ObjectId to string for JSON compatibility
+        portfolio['_id'] = str(portfolio['_id'])
+
+        return jsonify(portfolio['portfolio']), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/stock_news', methods=['POST'])
+def stock_news():
+    try:
+        data = request.get_json()
+        stocks = data.get("stocks")
+        result=[]
+        for stock in stocks:
+           print(stock)
+           symbol_with_ns = f"{stock}.NS"
+           stock_url = f"https://api.marketaux.com/v1/news/all?symbols={symbol_with_ns}&filter_entities=true&language=en&api_token=3LS0rE4VtzAGw7JwQppTJup9AT0uQ2UPBesBUKDO"
+           response = requests.get(stock_url)
+           response.raise_for_status()
+           data = response.json()
+           print(len(data))
+           for i in data.get('data', []):
+                try:
+                    results = analyze_sentiment(i['description'])
+                    result.append({
+                        "title": i['title'],
+                        "summary": i['description'],
+                        "url": i['url'],
+                        "sentiment": results['sentiment'],
+                        "strength": results['strength'],
+                        "polarity_score": results['polarity'],
+                        "subjectivity_score": results['subjectivity']
+                    })
+                except Exception as e:
+                    print(f"Error in sentiment analysis for article {i.get('title', 'unknown')}: {e}")
+        return jsonify(result)
+    except requests.exceptions.RequestException as req_err:
+        print("API Request Error:", req_err)
+        return jsonify({'error': 'Failed to fetch data from API'}), 500
+    except Exception as e:
+        print("General Error:", e)
+        return jsonify({'error': str(e)}), 500
+    
+
 @app.route('/latest-news')
 def latest_news():
     try:
-        # Make the API call using requests
-        response = requests.get(api_url)
-        data = response.json()
-        result=[]
-        for i in data['feed']:
-            results = analyze_sentiment(i['summary'])
-            result.append({"title": i['title'],"summary":i['summary'] , "url":i['url'] , "sentiment":results['sentiment'] ,
-                           "strength": results['strength'] , "polarity_score": results['polarity'] , "subjectivity_score":results['subjectivity']} )
-        return jsonify(result)
-        
+        # Get limit and page from query parameters
+        limit = int(request.args.get('limit', 3))
+        page = int(request.args.get('page', 1))  # Default to page 1
 
+        # Fetch data from the external API
+        response = requests.get(f"{api_url}&limit={limit}&page={page}")
+        response.raise_for_status()  # Raise an error for bad responses
+
+        # Parse API response
+        data = response.json()
+        result = []
+        for i in data.get('data', []):
+            try:
+                results = analyze_sentiment(i['description'])
+                result.append({
+                    "title": i['title'],
+                    "summary": i['description'],
+                    "url": i['url'],
+                    "sentiment": results['sentiment'],
+                    "strength": results['strength'],
+                    "polarity_score": results['polarity'],
+                    "subjectivity_score": results['subjectivity']
+                })
+            except Exception as e:
+                print(f"Error in sentiment analysis for article {i.get('title', 'unknown')}: {e}")
+
+        return jsonify(result)
+
+    except requests.exceptions.RequestException as req_err:
+        print("API Request Error:", req_err)
+        return jsonify({'error': 'Failed to fetch data from API'}), 500
     except Exception as e:
+        print("General Error:", e)
         return jsonify({'error': str(e)}), 500
 
 
