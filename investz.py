@@ -105,7 +105,7 @@ def home():
 def get_stock():
     # Get the stock name and date from the request JSON
     data = request.get_json()
-    stock_name = data.get("name", "")
+    stock_name = data.get("symbol", "")
     date = data.get("date", "")
 
     if not stock_name:
