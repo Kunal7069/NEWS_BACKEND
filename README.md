@@ -26,6 +26,12 @@ This project automates the process of logging into LinkedIn, scraping post detai
 
 ### 4️⃣ Handling Bot Detection
 - To avoid bot detection, the script logs in again before proceeding further.
+- After I get the post urls and I need to redirect to those post urls to scrap the comments so again and again redirect may caught it as a bot.
+- So before redirecting I again login as to avoid bot detection.
+- Similarly we can again and again login to avoid bot detection but we need to login from different ids.
+- Bot detection activity is not able to detect bot if after login the whole scrapping is done on the single page.
+- Then before redirecting to any other page, we should again login.
+- I tried it and the attempts in which I was detected as bot increased.
 
 ### 5️⃣ Scraping Comments
 - Visits each **post URL** again one by one.
@@ -64,4 +70,7 @@ This project automates the process of logging into LinkedIn, scraping post detai
 
 ## 🚀 How to Run the Project
 ```sh
+pip install requirements.txt
+playwright install
+cd browser_use
 python -m src.main
