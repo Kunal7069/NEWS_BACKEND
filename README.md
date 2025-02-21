@@ -34,23 +34,34 @@ This project automates the process of logging into LinkedIn, scraping post detai
 
 ---
 
-## 🛠️ Technologies Used
-- **Selenium** for browser automation
-- **BeautifulSoup** for parsing HTML data
-- **Python** for scripting automation logic
-- **LinkedIn** web scraping
 
 ---
 
-## ⚠️ Disclaimer
-This project is for educational purposes only. Scraping LinkedIn violates its [Terms of Service](https://www.linkedin.com/legal/user-agreement), and excessive automated actions may result in account restrictions.
+## 📌 Explanation of Components
+
+### 📂 `browser_use/src/`
+- **`config/`** → Placeholder for configuration settings.
+- **`log/`**
+  - **`logging.py`** → Handles logging and debugging information.
+- **`scrapper/`**
+  - **`posts_scrapper.py`** → Extracts LinkedIn post details.
+  - **`reaction_scrapper.py`** → Extracts names & profile URLs of reactors.
+  - **`comments_scrapper.py`** → Extracts comments and commenter details.
+
+### 📄 `.env`
+- Stores sensitive credentials such as LinkedIn login details.
+
+### 🏗️ `main.py`
+- The **entry point** of the project. Runs the automation in sequential order.
+
+### 📜 `app.log`
+- Contains execution logs for debugging purposes.
+
+### 📂 `linkedin_posts_data_xxx.json`
+- Stores extracted LinkedIn data in **JSON format** for further processing.
 
 ---
 
-## 🔗 Contributing
-Feel free to contribute by creating a pull request or reporting issues.
-
----
-
-## 📧 Contact
-For any queries, reach out via [your_email@example.com](mailto:your_email@example.com).
+## 🚀 How to Run the Project
+```sh
+python -m src.main
